@@ -102,8 +102,15 @@ class Announcer:
         verification = verify(number, salt, target_hash)
         verify_emoji = "✅" if verification else "❌"
         
-        # Format prize text
-        prize_text = f"💰 Prize Won: <b>{prize_amount} ⭐</b>\n" if prize_amount else ""
+        # Calculate actual prize won based on loyalty penalty
+        prize_text = ""
+        if prize_amount:
+            actual_prize = (prize_amount * loyalty_percent) / 100
+            prize_text = f"💰 Prize Won: <b>{actual_prize:.0f} ⭐</b>\n"
+            # Show penalty info if loyalty is less than 100%
+            if loyalty_percent < 100:
+                penalty = 100 - loyalty_percent
+                prize_text += f"⚠️ Loyalty Penalty: <b>{penalty}% (missed rounds)</b>\n"
         
         return (
             f"🎉 <b>WE HAVE A WINNER!</b> 🎉\n\n"
@@ -111,7 +118,6 @@ class Announcer:
             f"🎯 Secret Number: <b>{number}</b>\n"
             f"📍 Won in Round: <b>{round_index}</b>\n"
             f"{prize_text}"
-            f"� Loyalty Bonus: <b>{loyalty_percent}%</b>\n\n"
             f"🔓 <b>Proof (Commit-Reveal):</b>\n"
             f"Number: <code>{number}</code>\n"
             f"Salt: <code>{salt}</code>\n"
