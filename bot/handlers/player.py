@@ -19,30 +19,43 @@ router = Router()
 @router.message(F.text & ~F.text.startswith('/'), F.chat.type.in_({"group", "supergroup"}))
 async def handle_guess(message: Message, game_engine: GameEngine):
     """Handle player guesses in group chats."""
+    logger.info(f"Received text message from user {message.from_user.id}: {message.text}")
+    
     # Extract guess from message
     guess_value = extract_guess(message.text)
     
     if guess_value is None:
         # Not a guess, ignore
+        logger.info(f"Message '{message.text}' is not a valid guess, ignoring")
         return
+    
+    logger.info(f"Extracted guess value: {guess_value}")
+    logger.info(f"Extracted guess value: {guess_value}")
     
     # Validate guess range
     if not validate_guess_range(guess_value):
+        logger.info(f"Guess {guess_value} is out of range")
         await message.reply(Announcer.invalid_guess())
         return
     
     # Get active game
+    logger.info(f"Checking for active game in chat {message.chat.id}")
     game = await game_engine.db.get_active_game(message.chat.id)
     if not game:
         # No active game, silently ignore
+        logger.info(f"No active game found in chat {message.chat.id}, ignoring guess")
         return
+    
+    logger.info(f"Found active game: game_id={game.id}, status={game.status}")
     
     # Check game status
     if game.status != GameStatus.ROUND_ACTIVE:
+        logger.info(f"Game {game.id} is not in ROUND_ACTIVE status, current: {game.status}")
         await message.reply(Announcer.not_accepting_guesses())
         return
     
     # Get active round
+    logger.info(f"Getting active round for game {game.id}")
     active_round = await game_engine.db.get_active_round(game.id)
     if not active_round:
         # No active round, silently ignore
