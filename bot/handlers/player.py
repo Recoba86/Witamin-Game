@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 router = Router()
 
-@router.message(F.text, F.chat.type.in_({"group", "supergroup"}))
+@router.message(F.text & ~F.text.startswith('/'), F.chat.type.in_({"group", "supergroup"}))
 async def handle_guess(message: Message, game_engine: GameEngine):
     """Handle player guesses in group chats."""
     # Extract guess from message

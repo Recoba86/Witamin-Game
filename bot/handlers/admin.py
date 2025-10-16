@@ -309,7 +309,7 @@ async def cmd_cancel_input(message: Message):
     else:
         await message.reply(t('no_pending_input', lang))
 
-@router.message(F.text)
+@router.message(F.text & ~F.text.startswith('/'))
 async def handle_stars_cost_input(message: Message, game_engine: GameEngine):
     """Handle Stars cost input from admin."""
     t = Translations.get
