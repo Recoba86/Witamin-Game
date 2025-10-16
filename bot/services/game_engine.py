@@ -75,7 +75,7 @@ class GameEngine:
         # Create round
         round_obj = Round(
             game_id=game_id,
-            index=round_index,
+            round_index=round_index,
             status=RoundStatus.ACTIVE,
             message_cost_hint=cost,
             started_at=datetime.now(),
