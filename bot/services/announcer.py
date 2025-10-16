@@ -222,7 +222,14 @@ class Announcer:
             f"{t('commands_title', lang)}\n"
             f"{t('cmd_start', lang)}\n"
             f"{t('cmd_status', lang)}\n"
-            f"{t('cmd_newgame', lang)}\n\n"
+            f"{t('cmd_newgame', lang)}\n"
+            f"{t('cmd_start_round', lang)}\n"
+            f"{t('cmd_pause_round', lang)}\n"
+            f"{t('cmd_resume_round', lang)}\n"
+            f"{t('cmd_close_round', lang)}\n"
+            f"{t('cmd_reveal', lang)}\n"
+            f"{t('cmd_cancel_game', lang)}\n"
+            f"{t('cmd_post_cost', lang)}\n\n"
             f"{t('help_footer', lang)}"
         )
     

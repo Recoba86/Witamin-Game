@@ -99,6 +99,13 @@ class Translations:
         "cmd_start": "/start - Show this help",
         "cmd_status": "/status - View current game status",
         "cmd_newgame": "/newgame [prize] - (Admin) Start new game",
+        "cmd_start_round": "/start_round - (Admin) Start a new round",
+        "cmd_pause_round": "/pause_round - (Admin) Pause current round",
+        "cmd_resume_round": "/resume_round - (Admin) Resume paused round",
+        "cmd_close_round": "/close_round - (Admin) Close current round",
+        "cmd_reveal": "/reveal - (Admin) Reveal the secret number",
+        "cmd_cancel_game": "/cancel_game - (Admin) Cancel the game",
+        "cmd_post_cost": "/post_cost - (Admin) Post cost hint",
         "help_footer": "🎮 <i>Guess the hidden number! One winner, fair hash, and bigger rewards the longer you stay in the game!</i>",
         
         # Manual reveal
@@ -223,6 +230,13 @@ class Translations:
         "cmd_start": "/start - نمایش این راهنما",
         "cmd_status": "/status - مشاهده وضعیت بازی فعلی",
         "cmd_newgame": "/newgame [جایزه] - (ادمین) شروع بازی جدید",
+        "cmd_start_round": "/start_round - (ادمین) شروع دور جدید",
+        "cmd_pause_round": "/pause_round - (ادمین) توقف دور فعلی",
+        "cmd_resume_round": "/resume_round - (ادمین) ادامه دور متوقف شده",
+        "cmd_close_round": "/close_round - (ادمین) بستن دور فعلی",
+        "cmd_reveal": "/reveal - (ادمین) فاش کردن عدد مخفی",
+        "cmd_cancel_game": "/cancel_game - (ادمین) لغو بازی",
+        "cmd_post_cost": "/post_cost - (ادمین) ارسال راهنمای هزینه",
         "help_footer": "🎮 <i>عدد مخفی را حدس بزنید! یک برنده، hash منصفانه، و پاداش بیشتر هر چه بیشتر در بازی بمانید!</i>",
         
         # Manual reveal

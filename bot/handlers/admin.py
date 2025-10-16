@@ -100,6 +100,200 @@ async def cmd_newgame(message: Message, game_engine: GameEngine):
         f"prize={prize_amount}, sponsor={sponsor_name}"
     )
 
+@router.message(Command("start_round"))
+async def cmd_start_round(message: Message, game_engine: GameEngine):
+    """Handle /start_round command - prompt for Stars cost."""
+    t = Translations.get
+    lang = LANGUAGE
+    
+    if not is_admin(message.from_user.id):
+        await message.reply(t('only_admins', lang))
+        return
+    
+    # Get active game
+    game = await game_engine.db.get_active_game(message.chat.id)
+    if not game:
+        await message.reply(t('no_active_game', lang))
+        return
+    
+    # Determine next round
+    all_rounds = await game_engine.db.get_rounds_for_game(game.id)
+    next_round = len(all_rounds) + 1
+    
+    # Check if a round is already active
+    active_round = await game_engine.db.get_active_round(game.id)
+    if active_round and active_round.status == RoundStatus.ACTIVE:
+        await message.reply(t('round_already_active', lang))
+        return
+    
+    # Store pending round and ask for Stars cost
+    pending_round_starts[message.chat.id] = next_round
+    await message.reply(t('ask_stars_cost', lang, round=next_round), parse_mode="HTML")
+    logger.info(f"Admin {message.from_user.id} initiated /start_round for round {next_round}")
+
+@router.message(Command("pause_round"))
+async def cmd_pause_round(message: Message, game_engine: GameEngine):
+    """Handle /pause_round command."""
+    t = Translations.get
+    lang = LANGUAGE
+    
+    if not is_admin(message.from_user.id):
+        await message.reply(t('only_admins', lang))
+        return
+    
+    game = await game_engine.db.get_active_game(message.chat.id)
+    if not game:
+        await message.reply(t('no_active_game', lang))
+        return
+    
+    active_round = await game_engine.db.get_active_round(game.id)
+    if not active_round:
+        await message.reply(t('no_active_round', lang))
+        return
+    
+    await game_engine.pause_round(active_round.id)
+    
+    announcement = Announcer.round_paused()
+    keyboard = AdminKeyboards.paused_round_controls(active_round.round_index)
+    
+    await message.reply(announcement, reply_markup=keyboard, parse_mode="HTML")
+    logger.info(f"Round {active_round.id} paused via command")
+
+@router.message(Command("resume_round"))
+async def cmd_resume_round(message: Message, game_engine: GameEngine):
+    """Handle /resume_round command."""
+    t = Translations.get
+    lang = LANGUAGE
+    
+    if not is_admin(message.from_user.id):
+        await message.reply(t('only_admins', lang))
+        return
+    
+    game = await game_engine.db.get_active_game(message.chat.id)
+    if not game:
+        await message.reply(t('no_active_game', lang))
+        return
+    
+    active_round = await game_engine.db.get_active_round(game.id)
+    if not active_round:
+        await message.reply(t('no_active_round', lang))
+        return
+    
+    await game_engine.resume_round(active_round.id)
+    
+    announcement = Announcer.round_resumed(active_round.round_index)
+    keyboard = AdminKeyboards.active_round_controls(active_round.round_index)
+    
+    await message.reply(announcement, reply_markup=keyboard, parse_mode="HTML")
+    logger.info(f"Round {active_round.id} resumed via command")
+
+@router.message(Command("close_round"))
+async def cmd_close_round(message: Message, game_engine: GameEngine):
+    """Handle /close_round command."""
+    t = Translations.get
+    lang = LANGUAGE
+    
+    if not is_admin(message.from_user.id):
+        await message.reply(t('only_admins', lang))
+        return
+    
+    game = await game_engine.db.get_active_game(message.chat.id)
+    if not game:
+        await message.reply(t('no_active_game', lang))
+        return
+    
+    active_round = await game_engine.db.get_active_round(game.id)
+    if not active_round:
+        await message.reply(t('no_active_round', lang))
+        return
+    
+    await game_engine.close_round(active_round.id)
+    
+    # Calculate next round number
+    all_rounds = await game_engine.db.get_rounds_for_game(game.id)
+    next_round = len(all_rounds) + 1
+    
+    # Send announcement with sponsor end message if available
+    announcement = Announcer.round_closed(active_round.round_index, game.sponsor_end_message)
+    keyboard = AdminKeyboards.between_rounds_controls(next_round)
+    
+    await message.reply(announcement, reply_markup=keyboard, parse_mode="HTML")
+    logger.info(f"Round {active_round.id} closed via command")
+
+@router.message(Command("reveal"))
+async def cmd_reveal(message: Message, game_engine: GameEngine):
+    """Handle /reveal command - manually reveal the number."""
+    t = Translations.get
+    lang = LANGUAGE
+    
+    if not is_admin(message.from_user.id):
+        await message.reply(t('only_admins', lang))
+        return
+    
+    game = await game_engine.db.get_active_game(message.chat.id)
+    if not game:
+        await message.reply(t('no_active_game', lang))
+        return
+    
+    # Verify the game
+    is_valid = await game_engine.verify_game(game.id)
+    
+    announcement = Announcer.manual_reveal(game.number, game.salt, game.target_hash)
+    
+    await message.reply(announcement, parse_mode="HTML")
+    
+    # Mark game as finished (no winner)
+    await game_engine.db.update_game_status(game.id, GameStatus.GAME_FINISHED)
+    
+    logger.info(f"Game {game.id} manually revealed via command")
+
+@router.message(Command("cancel_game"))
+async def cmd_cancel_game(message: Message, game_engine: GameEngine):
+    """Handle /cancel_game command."""
+    t = Translations.get
+    lang = LANGUAGE
+    
+    if not is_admin(message.from_user.id):
+        await message.reply(t('only_admins', lang))
+        return
+    
+    game = await game_engine.db.get_active_game(message.chat.id)
+    if not game:
+        await message.reply(t('no_active_game', lang))
+        return
+    
+    await game_engine.cancel_game(game.id)
+    
+    announcement = Announcer.game_canceled()
+    
+    await message.reply(announcement, parse_mode="HTML")
+    logger.info(f"Game {game.id} canceled via command")
+
+@router.message(Command("post_cost"))
+async def cmd_post_cost(message: Message, game_engine: GameEngine):
+    """Handle /post_cost command - post cost hint for next round."""
+    t = Translations.get
+    lang = LANGUAGE
+    
+    if not is_admin(message.from_user.id):
+        await message.reply(t('only_admins', lang))
+        return
+    
+    game = await game_engine.db.get_active_game(message.chat.id)
+    if not game:
+        await message.reply(t('no_active_game', lang))
+        return
+    
+    # Determine next round
+    all_rounds = await game_engine.db.get_rounds_for_game(game.id)
+    next_round = len(all_rounds) + 1
+    
+    cost = get_round_cost(next_round)
+    announcement = Announcer.cost_hint(next_round, cost)
+    
+    await message.reply(announcement, parse_mode="HTML")
+    logger.info(f"Cost hint posted for round {next_round} via command")
+
 @router.message(Command("cancel"))
 async def cmd_cancel_input(message: Message):
     """Cancel any pending admin input."""
