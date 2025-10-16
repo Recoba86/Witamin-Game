@@ -119,6 +119,7 @@ class Translations:
         "cost_warning": "⚠️ Admin should manually set this in Telegram's \"Starred Group Settings\" before starting the round.",
         
         # Admin messages
+        "newgame_usage": "⚠️ <b>Prize amount required!</b>\n\n<b>Usage:</b>\n<code>/newgame [prize]</code>\nor\n<code>/newgame [prize] | [sponsor] | [start_msg] | [end_msg]</code>\n\n<b>Examples:</b>\n• <code>/newgame 1000</code>\n• <code>/newgame 500 | TechCorp</code>\n• <code>/newgame 1000 | TechCorp | Welcome! | Thanks!</code>",
         "ask_stars_cost": "⭐ <b>Enter Stars Cost for Round {round}</b>\n\nPlease type the number of Stars required to post in this group.\nExamples: <code>1</code>, <code>4</code>, <code>10</code>, etc.\n\nOr send <code>/cancel</code> to cancel.",
         "input_cancelled": "❌ Input cancelled.",
         "no_pending_input": "⚠️ No pending input to cancel.",
@@ -248,6 +249,7 @@ class Translations:
         "cost_hint_title": "💰 <b>هزینه دور {round}</b>",
         "cost_suggested": "پیشنهادی: <b>{cost} ⭐ ستاره</b>",
         "cost_warning": "⚠️ ادمین باید این را به صورت دستی در \"تنظیمات گروه ستاره‌دار\" تلگرام قبل از شروع دور تنظیم کند.",
+        "newgame_usage": "⚠️ <b>مبلغ جایزه الزامی است!</b>\n\n<b>نحوه استفاده:</b>\n<code>/newgame [جایزه]</code>\nیا\n<code>/newgame [جایزه] | [اسپانسر] | [پیام_شروع] | [پیام_پایان]</code>\n\n<b>مثال‌ها:</b>\n• <code>/newgame 1000</code>\n• <code>/newgame 500 | TechCorp</code>\n• <code>/newgame 1000 | TechCorp | خوش آمدید! | متشکریم!</code>",
         
         # Admin messages
         "ask_stars_cost": "⭐ <b>هزینه ستاره برای دور {round} را وارد کنید</b>\n\nلطفا تعداد ستاره‌های مورد نیاز برای پست در این گروه را تایپ کنید.\nمثال‌ها: <code>۱</code>، <code>۴</code>، <code>۱۰</code> و غیره\n\nیا <code>/cancel</code> برای لغو ارسال کنید.",

@@ -81,6 +81,11 @@ async def cmd_newgame(message: Message, game_engine: GameEngine):
             await message.reply(t('invalid_format', lang), parse_mode="HTML")
             return
     
+    # Validate that prize amount is provided
+    if prize_amount is None:
+        await message.reply(t('newgame_usage', lang), parse_mode="HTML")
+        return
+    
     # Create new game
     game, target_hash = await game_engine.create_game(
         message.chat.id, 
