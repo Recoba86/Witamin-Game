@@ -85,10 +85,18 @@ async def handle_guess(message: Message, game_engine: GameEngine):
     try:
         if guess_value < game.number:
             # Number is higher, react with thumbs up
-            await message.set_reaction([ReactionTypeEmoji(emoji="👍")])
+            await message.bot.set_message_reaction(
+                chat_id=message.chat.id,
+                message_id=message.message_id,
+                reaction=[ReactionTypeEmoji(emoji="👍")]
+            )
         else:
             # Number is lower, react with thumbs down
-            await message.set_reaction([ReactionTypeEmoji(emoji="👎")])
+            await message.bot.set_message_reaction(
+                chat_id=message.chat.id,
+                message_id=message.message_id,
+                reaction=[ReactionTypeEmoji(emoji="👎")]
+            )
     except Exception as e:
         logger.warning(f"Could not set reaction: {e}")
         # Fallback: send text hint if reactions fail
