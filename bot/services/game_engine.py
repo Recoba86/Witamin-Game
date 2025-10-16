@@ -99,7 +99,8 @@ class GameEngine:
     async def _start_round_timer(self, round_id: int, game_id: int):
         """
         Start a timer for a round that will auto-close after duration.
-        Only closes if minimum guesses (10) have been reached.
+        Round 1: Requires minimum 10 guesses before closing.
+        Round 2+: Auto-closes after timer expires regardless of guess count.
         """
         async def timer_task():
             try:
@@ -114,25 +115,31 @@ class GameEngine:
                     logger.info(f"Round {round_id} is no longer active, skipping auto-close")
                     return
                 
-                logger.info(f"Round {round_id} has {round_obj.total_guesses} guesses (min: {MIN_GUESSES_BEFORE_CLOSE})")
-                # Only close if we have at least MIN_GUESSES_BEFORE_CLOSE guesses
-                if round_obj.total_guesses >= MIN_GUESSES_BEFORE_CLOSE:
-                    logger.info(f"Auto-closing round {round_id}...")
-                    await self._auto_close_round(round_id, game_id)
+                # Check if this is round 1 - only round 1 requires minimum guesses
+                if round_obj.round_index == 1:
+                    logger.info(f"Round 1 has {round_obj.total_guesses} guesses (min: {MIN_GUESSES_BEFORE_CLOSE})")
+                    # Only close if we have at least MIN_GUESSES_BEFORE_CLOSE guesses
+                    if round_obj.total_guesses >= MIN_GUESSES_BEFORE_CLOSE:
+                        logger.info(f"Auto-closing round 1...")
+                        await self._auto_close_round(round_id, game_id)
+                    else:
+                        logger.info(f"Waiting for minimum guesses for round 1...")
+                        # Wait until we reach minimum guesses - check every 30 seconds
+                        while True:
+                            await asyncio.sleep(30)
+                            round_obj = await self.db.get_round(round_id)
+                            if not round_obj or round_obj.status != RoundStatus.ACTIVE:
+                                logger.info(f"Round 1 is no longer active during wait")
+                                break
+                            logger.info(f"Round 1 now has {round_obj.total_guesses} guesses")
+                            if round_obj.total_guesses >= MIN_GUESSES_BEFORE_CLOSE:
+                                logger.info(f"Minimum guesses reached, auto-closing round 1...")
+                                await self._auto_close_round(round_id, game_id)
+                                break
                 else:
-                    logger.info(f"Waiting for minimum guesses for round {round_id}...")
-                    # Wait until we reach minimum guesses - check every 30 seconds
-                    while True:
-                        await asyncio.sleep(30)
-                        round_obj = await self.db.get_round(round_id)
-                        if not round_obj or round_obj.status != RoundStatus.ACTIVE:
-                            logger.info(f"Round {round_id} is no longer active during wait")
-                            break
-                        logger.info(f"Round {round_id} now has {round_obj.total_guesses} guesses")
-                        if round_obj.total_guesses >= MIN_GUESSES_BEFORE_CLOSE:
-                            logger.info(f"Minimum guesses reached, auto-closing round {round_id}...")
-                            await self._auto_close_round(round_id, game_id)
-                            break
+                    # Round 2+: Auto-close immediately after timer expires
+                    logger.info(f"Round {round_obj.round_index} timer expired, auto-closing (no minimum guess requirement)")
+                    await self._auto_close_round(round_id, game_id)
             except asyncio.CancelledError:
                 # Timer was cancelled (round manually closed/paused)
                 logger.info(f"Round timer for round {round_id} was cancelled")
