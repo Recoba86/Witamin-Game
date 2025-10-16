@@ -31,10 +31,16 @@ class Announcer:
     @staticmethod
     def round_started(round_index: int, cost: int, duration_minutes: int = 2, sponsor_message: Optional[str] = None) -> str:
         """Format message for round start."""
+        # Only round 1 requires minimum guesses
+        duration_text = f"⏱ Duration: <b>{duration_minutes} minutes</b>"
+        if round_index == 1:
+            duration_text += " (min 10 guesses)"
+        duration_text += "\n"
+        
         base_message = (
             f"🔥 <b>Round {round_index} Started!</b>\n\n"
             f"💰 Suggested cost: <b>{cost} ⭐ Star(s)</b>\n"
-            f"⏱ Duration: <b>{duration_minutes} minutes</b> (min 10 guesses)\n"
+            f"{duration_text}"
             f"🎯 Range: 1 - 10,000\n"
             f"📊 Limit: 10 guesses per player\n\n"
             "Good luck! 🍀"
