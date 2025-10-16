@@ -21,13 +21,13 @@ class AdminKeyboards:
             [
                 InlineKeyboardButton(
                     text=f"▶️ Start Round {next_round}",
-                    callback_data=f'admin:{json.dumps({"a":"start_round","n":{next_round}})}'
+                    callback_data=f'admin:{json.dumps({"a":"start_round","n":next_round})}'
                 )
             ],
             [
                 InlineKeyboardButton(
                     text="💰 Post Cost Hint",
-                    callback_data=f'admin:{json.dumps({"a":"post_cost","n":{next_round}})}'
+                    callback_data=f'admin:{json.dumps({"a":"post_cost","n":next_round})}'
                 )
             ],
             [
@@ -140,13 +140,13 @@ class AdminKeyboards:
             [
                 InlineKeyboardButton(
                     text=f"▶️ Start Round {next_round}",
-                    callback_data=f'admin:{json.dumps({"a":"start_round","n":{next_round}})}'
+                    callback_data=f'admin:{json.dumps({"a":"start_round","n":next_round})}'
                 )
             ],
             [
                 InlineKeyboardButton(
                     text="💰 Post Cost Hint",
-                    callback_data=f'admin:{json.dumps({"a":"post_cost","n":{next_round}})}'
+                    callback_data=f'admin:{json.dumps({"a":"post_cost","n":next_round})}'
                 )
             ],
             [

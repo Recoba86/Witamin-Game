@@ -163,7 +163,7 @@ class Database:
             cursor = await db.execute(
                 """SELECT * FROM rounds 
                    WHERE game_id = ? AND status IN (?, ?) 
-                   ORDER BY index DESC LIMIT 1""",
+                   ORDER BY round_index DESC LIMIT 1""",
                 (game_id, RoundStatus.ACTIVE, RoundStatus.PAUSED)
             )
             row = await cursor.fetchone()
@@ -186,7 +186,7 @@ class Database:
         async with aiosqlite.connect(self.db_path) as db:
             db.row_factory = aiosqlite.Row
             cursor = await db.execute(
-                "SELECT * FROM rounds WHERE game_id = ? ORDER BY index",
+                "SELECT * FROM rounds WHERE game_id = ? ORDER BY round_index",
                 (game_id,)
             )
             rows = await cursor.fetchall()
