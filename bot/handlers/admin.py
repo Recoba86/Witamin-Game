@@ -22,6 +22,11 @@ def is_admin(user_id: int) -> bool:
     """Check if user is admin."""
     return user_id in ADMIN_IDS
 
+def is_pending_stars_input(message: Message) -> bool:
+    """Check if this chat is waiting for Stars cost input from admin."""
+    return (message.chat.id in pending_round_starts and 
+            is_admin(message.from_user.id))
+
 @router.message(Command("newgame"))
 async def cmd_newgame(message: Message, game_engine: GameEngine):
     """Handle /newgame command - create a new game.
@@ -314,21 +319,13 @@ async def cmd_cancel_input(message: Message):
     else:
         await message.reply(t('no_pending_input', lang))
 
-@router.message(F.text & ~F.text.startswith('/'))
+@router.message(F.text & ~F.text.startswith('/'), F.func(is_pending_stars_input))
 async def handle_stars_cost_input(message: Message, game_engine: GameEngine):
-    """Handle Stars cost input from admin."""
+    """Handle Stars cost input from admin - only when pending."""
     t = Translations.get
     lang = LANGUAGE
     
-    # Check if this chat has a pending round start
-    if message.chat.id not in pending_round_starts:
-        return  # Not waiting for input from this chat
-    
-    # Check if user is admin
-    if not is_admin(message.from_user.id):
-        return
-    
-    # Get the round index
+    # Get the round index (we know it exists because of the filter)
     round_index = pending_round_starts[message.chat.id]
     
     # Parse the Stars cost
