@@ -165,8 +165,9 @@ class GameEngine:
         
         logger.info(f"Closing round {round_id} for game {game_id} in chat {game.chat_id}")
         
-        # Close the round
-        await self.close_round(round_id)
+        # Close the round (but don't cancel timer - we're IN the timer)
+        await self.db.close_round(round_id)
+        await self.db.update_game_status(game_id, GameStatus.GAME_COMMITTED)
         
         # Send announcement if bot is available
         if self.bot:
