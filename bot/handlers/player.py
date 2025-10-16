@@ -1,7 +1,7 @@
 """Player message handlers for guesses."""
 import logging
 from aiogram import Router, F
-from aiogram.types import Message, ReactionTypeEmoji
+from aiogram.types import Message
 from bot.services.game_engine import GameEngine
 from bot.services.parsing import extract_guess
 from bot.services.validators import (
@@ -81,26 +81,14 @@ async def handle_guess(message: Message, game_engine: GameEngine):
         await handle_winner(message, game_engine, game, active_round)
         return
     
-    # Add reaction hint: 👍 if number is higher, 👎 if lower
-    try:
-        if guess_value < game.number:
-            # Number is higher, react with thumbs up
-            await message.bot.set_message_reaction(
-                chat_id=message.chat.id,
-                message_id=message.message_id,
-                reaction=[ReactionTypeEmoji(emoji="👍")]
-            )
-        else:
-            # Number is lower, react with thumbs down
-            await message.bot.set_message_reaction(
-                chat_id=message.chat.id,
-                message_id=message.message_id,
-                reaction=[ReactionTypeEmoji(emoji="👎")]
-            )
-    except Exception as e:
-        logger.warning(f"Could not set reaction: {e}")
-        # Fallback: send text hint if reactions fail
-        await send_text_hint(message, guess_value, game.number)
+    # Send text hint - reactions are unreliable in groups
+    # They're often private or disappear, so use clear text hints
+    if guess_value < game.number:
+        hint = "👍 The number is <b>higher</b>"
+    else:
+        hint = "� The number is <b>lower</b>"
+    
+    await message.reply(hint, parse_mode="HTML")
 
 async def handle_winner(message: Message, engine: GameEngine, game, active_round):
     """Handle a winning guess."""
@@ -131,12 +119,3 @@ async def handle_winner(message: Message, engine: GameEngine, game, active_round
         f"Game {game.id} won by user {winner_id} "
         f"in round {active_round.round_index}, loyalty={loyalty}%, prize={game.prize_amount}"
     )
-
-async def send_text_hint(message: Message, guess_value: int, target_number: int):
-    """Send a text hint as fallback if reactions don't work."""
-    if guess_value < target_number:
-        hint = "👍 The number is <b>higher</b>"
-    else:
-        hint = "👎 The number is <b>lower</b>"
-    
-    await message.reply(hint, parse_mode="HTML")
