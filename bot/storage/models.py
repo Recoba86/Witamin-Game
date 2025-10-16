@@ -57,7 +57,7 @@ class Round:
         self,
         id: Optional[int] = None,
         game_id: int = 0,
-        index: int = 1,
+        round_index: int = 1,
         status: str = RoundStatus.PENDING,
         message_cost_hint: Optional[int] = None,
         started_at: Optional[datetime] = None,
@@ -66,7 +66,7 @@ class Round:
     ):
         self.id = id
         self.game_id = game_id
-        self.index = index
+        self.round_index = round_index
         self.status = status
         self.message_cost_hint = message_cost_hint
         self.started_at = started_at

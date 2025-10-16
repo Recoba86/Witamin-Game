@@ -259,7 +259,7 @@ class GameEngine:
             return 100
         
         # Calculate missed rounds
-        all_round_indices = {r.index for r in all_rounds}
+        all_round_indices = {r.round_index for r in all_rounds}
         participated_set = set(participated_rounds)
         missed_rounds = all_round_indices - participated_set
         

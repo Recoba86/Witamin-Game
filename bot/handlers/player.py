@@ -115,7 +115,7 @@ async def handle_winner(message: Message, engine: GameEngine, game, active_round
         salt=game.salt,
         target_hash=game.target_hash,
         loyalty_percent=loyalty,
-        round_index=active_round.index,
+        round_index=active_round.round_index,
         prize_amount=game.prize_amount
     )
     
@@ -123,7 +123,7 @@ async def handle_winner(message: Message, engine: GameEngine, game, active_round
     
     logger.info(
         f"Game {game.id} won by user {winner_id} "
-        f"in round {active_round.index}, loyalty={loyalty}%, prize={game.prize_amount}"
+        f"in round {active_round.round_index}, loyalty={loyalty}%, prize={game.prize_amount}"
     )
 
 async def send_text_hint(message: Message, guess_value: int, target_number: int):

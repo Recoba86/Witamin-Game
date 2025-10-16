@@ -191,7 +191,7 @@ async def handle_pause_round(callback: CallbackQuery, engine: GameEngine, game):
     await engine.pause_round(active_round.id)
     
     announcement = Announcer.round_paused()
-    keyboard = AdminKeyboards.paused_round_controls(active_round.index)
+    keyboard = AdminKeyboards.paused_round_controls(active_round.round_index)
     
     await callback.message.reply(announcement, reply_markup=keyboard, parse_mode="HTML")
     await callback.answer("⏸ Round paused")
@@ -206,8 +206,8 @@ async def handle_resume_round(callback: CallbackQuery, engine: GameEngine, game)
     
     await engine.resume_round(active_round.id)
     
-    announcement = Announcer.round_resumed(active_round.index)
-    keyboard = AdminKeyboards.active_round_controls(active_round.index)
+    announcement = Announcer.round_resumed(active_round.round_index)
+    keyboard = AdminKeyboards.active_round_controls(active_round.round_index)
     
     await callback.message.reply(announcement, reply_markup=keyboard, parse_mode="HTML")
     await callback.answer("▶️ Round resumed")
@@ -227,7 +227,7 @@ async def handle_close_round(callback: CallbackQuery, engine: GameEngine, game):
     next_round = len(all_rounds) + 1
     
     # Send announcement with sponsor end message if available
-    announcement = Announcer.round_closed(active_round.index, game.sponsor_end_message)
+    announcement = Announcer.round_closed(active_round.round_index, game.sponsor_end_message)
     keyboard = AdminKeyboards.between_rounds_controls(next_round)
     
     await callback.message.reply(announcement, reply_markup=keyboard, parse_mode="HTML")

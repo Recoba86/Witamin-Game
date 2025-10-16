@@ -38,7 +38,7 @@ class Database:
                 CREATE TABLE IF NOT EXISTS rounds (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     game_id INTEGER NOT NULL,
-                    index INTEGER NOT NULL,
+                    round_index INTEGER NOT NULL,
                     status TEXT NOT NULL,
                     message_cost_hint INTEGER,
                     started_at TIMESTAMP,
@@ -148,9 +148,9 @@ class Database:
         """Create a new round."""
         async with aiosqlite.connect(self.db_path) as db:
             cursor = await db.execute(
-                """INSERT INTO rounds (game_id, index, status, message_cost_hint, started_at, total_guesses)
+                """INSERT INTO rounds (game_id, round_index, status, message_cost_hint, started_at, total_guesses)
                    VALUES (?, ?, ?, ?, ?, ?)""",
-                (round_obj.game_id, round_obj.index, round_obj.status, 
+                (round_obj.game_id, round_obj.round_index, round_obj.status, 
                  round_obj.message_cost_hint, round_obj.started_at, round_obj.total_guesses)
             )
             await db.commit()
@@ -277,11 +277,11 @@ class Database:
         """Get list of round indices where user participated."""
         async with aiosqlite.connect(self.db_path) as db:
             cursor = await db.execute(
-                """SELECT DISTINCT r.index 
+                """SELECT DISTINCT r.round_index 
                    FROM participations p
                    JOIN rounds r ON p.round_id = r.id
                    WHERE p.game_id = ? AND p.user_id = ?
-                   ORDER BY r.index""",
+                   ORDER BY r.round_index""",
                 (game_id, user_id)
             )
             rows = await cursor.fetchall()
@@ -311,7 +311,7 @@ class Database:
         return Round(
             id=row['id'],
             game_id=row['game_id'],
-            index=row['index'],
+            round_index=row['round_index'],
             status=row['status'],
             message_cost_hint=row['message_cost_hint'],
             started_at=row['started_at'],

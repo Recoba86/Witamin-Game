@@ -158,7 +158,7 @@ class Announcer:
         status_text += f"📈 Total Rounds: <b>{total_rounds}</b>\n\n"
         
         if active_round:
-            status_text += f"🔥 <b>Active Round {active_round.index}</b>\n"
+            status_text += f"🔥 <b>Active Round {active_round.round_index}</b>\n"
             status_text += f"📊 Total Guesses: <b>{active_round.total_guesses}</b>\n"
             status_text += f"💰 Suggested Cost: <b>{active_round.message_cost_hint} ⭐</b>\n"
             
