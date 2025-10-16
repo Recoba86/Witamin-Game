@@ -21,7 +21,7 @@ class AdminKeyboards:
             [
                 InlineKeyboardButton(
                     text=f"▶️ Start Round {next_round}",
-                    callback_data=f'admin:{json.dumps({"a":"start_round","n":next_round})}'
+                    callback_data=f'admin:{json.dumps({"a":"ask_cost","n":next_round})}'
                 )
             ],
             [
@@ -140,7 +140,7 @@ class AdminKeyboards:
             [
                 InlineKeyboardButton(
                     text=f"▶️ Start Round {next_round}",
-                    callback_data=f'admin:{json.dumps({"a":"start_round","n":next_round})}'
+                    callback_data=f'admin:{json.dumps({"a":"ask_cost","n":next_round})}'
                 )
             ],
             [
@@ -167,3 +167,55 @@ class AdminKeyboards:
             ]
         ]
         return InlineKeyboardMarkup(inline_keyboard=keyboard)
+    
+    @staticmethod
+    def select_stars_cost(round_index: int) -> InlineKeyboardMarkup:
+        """
+        Keyboard for selecting Stars cost for a round.
+        
+        Args:
+            round_index: The round number to start
+            
+        Returns:
+            InlineKeyboardMarkup
+        """
+        keyboard = [
+            [
+                InlineKeyboardButton(
+                    text="⭐ 1 Star",
+                    callback_data=f'admin:{json.dumps({"a":"start_round","n":round_index,"c":1})}'
+                ),
+                InlineKeyboardButton(
+                    text="⭐⭐ 2 Stars",
+                    callback_data=f'admin:{json.dumps({"a":"start_round","n":round_index,"c":2})}'
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="⭐⭐⭐ 3 Stars",
+                    callback_data=f'admin:{json.dumps({"a":"start_round","n":round_index,"c":3})}'
+                ),
+                InlineKeyboardButton(
+                    text="⭐⭐⭐⭐ 4 Stars",
+                    callback_data=f'admin:{json.dumps({"a":"start_round","n":round_index,"c":4})}'
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="⭐⭐⭐⭐⭐ 5 Stars",
+                    callback_data=f'admin:{json.dumps({"a":"start_round","n":round_index,"c":5})}'
+                ),
+                InlineKeyboardButton(
+                    text="⭐⭐⭐⭐⭐⭐ 6+ Stars",
+                    callback_data=f'admin:{json.dumps({"a":"start_round","n":round_index,"c":6})}'
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="❌ Cancel",
+                    callback_data=f'admin:{json.dumps({"a":"status"})}'
+                )
+            ]
+        ]
+        return InlineKeyboardMarkup(inline_keyboard=keyboard)
+

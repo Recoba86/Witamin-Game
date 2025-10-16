@@ -62,19 +62,20 @@ class GameEngine:
         
         return game, target_hash
     
-    async def start_round(self, game_id: int, round_index: int) -> Round:
+    async def start_round(self, game_id: int, round_index: int, stars_cost: int = None) -> Round:
         """
         Start a new round for the game.
         
         Args:
             game_id: The game ID
             round_index: The round number (1-based)
+            stars_cost: Optional Stars cost for the round (overrides default)
             
         Returns:
             The created Round object
         """
-        # Get suggested cost for this round
-        cost = get_round_cost(round_index)
+        # Use provided Stars cost or get suggested cost for this round
+        cost = stars_cost if stars_cost is not None else get_round_cost(round_index)
         
         # Create round
         round_obj = Round(

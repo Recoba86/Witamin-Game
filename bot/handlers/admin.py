@@ -127,8 +127,14 @@ async def handle_admin_callback(callback: CallbackQuery, game_engine: GameEngine
         return
     
     # Route to appropriate handler
-    if action == "start_round":
-        await handle_start_round(callback, game_engine, game, data.get("n", 1))
+    if action == "ask_cost":
+        await handle_ask_cost(callback, data.get("n", 1))
+    elif action == "start_round":
+        stars_cost = data.get("c")
+        if stars_cost is None:
+            await callback.answer("⚠️ Stars cost not specified", show_alert=True)
+            return
+        await handle_start_round(callback, game_engine, game, data.get("n", 1), stars_cost)
     elif action == "pause_round":
         await handle_pause_round(callback, game_engine, game)
     elif action == "resume_round":
@@ -146,16 +152,27 @@ async def handle_admin_callback(callback: CallbackQuery, game_engine: GameEngine
     else:
         await callback.answer("❌ Unknown action", show_alert=True)
 
-async def handle_start_round(callback: CallbackQuery, engine: GameEngine, game, round_index: int):
-    """Handle starting a new round."""
+async def handle_ask_cost(callback: CallbackQuery, round_index: int):
+    """Ask admin to select Stars cost for the round."""
+    keyboard = AdminKeyboards.select_stars_cost(round_index)
+    await callback.message.reply(
+        f"⭐ <b>Select Stars Cost for Round {round_index}</b>\n\n"
+        "Please select how many Stars are required to post in this group:",
+        reply_markup=keyboard,
+        parse_mode="HTML"
+    )
+    await callback.answer()
+
+async def handle_start_round(callback: CallbackQuery, engine: GameEngine, game, round_index: int, stars_cost: int):
+    """Handle starting a new round with specified Stars cost."""
     # Verify no round is currently active
     active_round = await engine.db.get_active_round(game.id)
     if active_round and active_round.status == RoundStatus.ACTIVE:
         await callback.answer("⚠️ A round is already active", show_alert=True)
         return
     
-    # Start the round
-    round_obj = await engine.start_round(game.id, round_index)
+    # Start the round with the specified Stars cost
+    round_obj = await engine.start_round(game.id, round_index, stars_cost)
     
     # Send announcement with sponsor message if available
     announcement = Announcer.round_started(
@@ -167,8 +184,8 @@ async def handle_start_round(callback: CallbackQuery, engine: GameEngine, game, 
     keyboard = AdminKeyboards.active_round_controls(round_index)
     
     await callback.message.reply(announcement, reply_markup=keyboard, parse_mode="HTML")
-    await callback.answer(f"✅ Round {round_index} started")
-    logger.info(f"Round {round_index} started for game {game.id}")
+    await callback.answer(f"✅ Round {round_index} started with {stars_cost} ⭐ cost")
+    logger.info(f"Round {round_index} started for game {game.id} with {stars_cost} Stars cost")
 
 async def handle_pause_round(callback: CallbackQuery, engine: GameEngine, game):
     """Handle pausing the current round."""
