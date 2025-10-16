@@ -1,12 +1,15 @@
 """Game engine - core business logic for the guessing game."""
 import random
 import asyncio
+import logging
 from datetime import datetime, timedelta
 from typing import Optional, Tuple, Dict
 from bot.storage.db import Database
 from bot.storage.models import Game, Round, Guess, GameStatus, RoundStatus
 from bot.services.commit_reveal import make_commit, verify
 from bot.config import MIN_NUMBER, MAX_NUMBER, get_round_cost, ROUND_DURATION_MINUTES, MIN_GUESSES_BEFORE_CLOSE
+
+logger = logging.getLogger(__name__)
 
 class GameEngine:
     """Main game engine handling all game logic."""
@@ -100,30 +103,42 @@ class GameEngine:
         """
         async def timer_task():
             try:
+                logger.info(f"Round timer started for round {round_id}, will check after {ROUND_DURATION_MINUTES} minutes")
                 # Wait for the configured duration
                 await asyncio.sleep(ROUND_DURATION_MINUTES * 60)
                 
+                logger.info(f"Round timer expired for round {round_id}, checking status...")
                 # Check if round is still active
                 round_obj = await self.db.get_round(round_id)
                 if not round_obj or round_obj.status != RoundStatus.ACTIVE:
+                    logger.info(f"Round {round_id} is no longer active, skipping auto-close")
                     return
                 
+                logger.info(f"Round {round_id} has {round_obj.total_guesses} guesses (min: {MIN_GUESSES_BEFORE_CLOSE})")
                 # Only close if we have at least MIN_GUESSES_BEFORE_CLOSE guesses
                 if round_obj.total_guesses >= MIN_GUESSES_BEFORE_CLOSE:
+                    logger.info(f"Auto-closing round {round_id}...")
                     await self._auto_close_round(round_id, game_id)
                 else:
+                    logger.info(f"Waiting for minimum guesses for round {round_id}...")
                     # Wait until we reach minimum guesses - check every 30 seconds
                     while True:
                         await asyncio.sleep(30)
                         round_obj = await self.db.get_round(round_id)
                         if not round_obj or round_obj.status != RoundStatus.ACTIVE:
+                            logger.info(f"Round {round_id} is no longer active during wait")
                             break
+                        logger.info(f"Round {round_id} now has {round_obj.total_guesses} guesses")
                         if round_obj.total_guesses >= MIN_GUESSES_BEFORE_CLOSE:
+                            logger.info(f"Minimum guesses reached, auto-closing round {round_id}...")
                             await self._auto_close_round(round_id, game_id)
                             break
             except asyncio.CancelledError:
                 # Timer was cancelled (round manually closed/paused)
+                logger.info(f"Round timer for round {round_id} was cancelled")
                 pass
+            except Exception as e:
+                logger.error(f"Error in round timer for round {round_id}: {e}", exc_info=True)
             finally:
                 # Clean up timer reference
                 if round_id in self.round_timers:
@@ -138,12 +153,17 @@ class GameEngine:
         from bot.services.announcer import Announcer
         from bot.keyboards.admin import AdminKeyboards
         
+        logger.info(f"_auto_close_round called for round {round_id}, game {game_id}")
+        
         # Get round and game info
         round_obj = await self.db.get_round(round_id)
         game = await self.db.get_game(game_id)
         
         if not round_obj or not game:
+            logger.warning(f"Could not find round {round_id} or game {game_id}")
             return
+        
+        logger.info(f"Closing round {round_id} for game {game_id} in chat {game.chat_id}")
         
         # Close the round
         await self.close_round(round_id)
@@ -155,6 +175,8 @@ class GameEngine:
                 all_rounds = await self.db.get_rounds_for_game(game_id)
                 next_round = len(all_rounds) + 1
                 
+                logger.info(f"Sending auto-close announcement to chat {game.chat_id}, next round: {next_round}")
+                
                 # Send announcement with sponsor end message if available
                 announcement = Announcer.round_closed(round_obj.round_index, game.sponsor_end_message)
                 keyboard = AdminKeyboards.between_rounds_controls(next_round)
@@ -165,10 +187,11 @@ class GameEngine:
                     reply_markup=keyboard,
                     parse_mode="HTML"
                 )
+                logger.info(f"Auto-close announcement sent successfully to chat {game.chat_id}")
             except Exception as e:
-                import logging
-                logger = logging.getLogger(__name__)
-                logger.error(f"Failed to send auto-close announcement: {e}")
+                logger.error(f"Failed to send auto-close announcement: {e}", exc_info=True)
+        else:
+            logger.warning("Bot instance not available, cannot send auto-close announcement")
     
     async def pause_round(self, round_id: int):
         """Pause the current round."""
