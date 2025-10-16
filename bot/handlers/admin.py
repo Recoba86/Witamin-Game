@@ -14,6 +14,9 @@ logger = logging.getLogger(__name__)
 
 router = Router()
 
+# Temporary storage for pending round starts (chat_id -> round_index)
+pending_round_starts = {}
+
 def is_admin(user_id: int) -> bool:
     """Check if user is admin."""
     return user_id in ADMIN_IDS
@@ -104,6 +107,72 @@ async def cmd_newgame(message: Message, game_engine: GameEngine):
         f"prize={prize_amount}, sponsor={sponsor_name}"
     )
 
+@router.message(Command("cancel"))
+async def cmd_cancel_input(message: Message):
+    """Cancel any pending admin input."""
+    if not is_admin(message.from_user.id):
+        return
+    
+    if message.chat.id in pending_round_starts:
+        del pending_round_starts[message.chat.id]
+        await message.reply("❌ Input cancelled.")
+    else:
+        await message.reply("⚠️ No pending input to cancel.")
+
+@router.message(F.text)
+async def handle_stars_cost_input(message: Message, game_engine: GameEngine):
+    """Handle Stars cost input from admin."""
+    # Check if this chat has a pending round start
+    if message.chat.id not in pending_round_starts:
+        return  # Not waiting for input from this chat
+    
+    # Check if user is admin
+    if not is_admin(message.from_user.id):
+        return
+    
+    # Get the round index
+    round_index = pending_round_starts[message.chat.id]
+    
+    # Parse the Stars cost
+    try:
+        stars_cost = int(message.text.strip())
+        if stars_cost < 0:
+            await message.reply("⚠️ Stars cost must be a positive number. Please try again.")
+            return
+    except ValueError:
+        await message.reply("⚠️ Invalid number. Please type a valid number of Stars (e.g., 1, 4, 10).")
+        return
+    
+    # Clear the pending state
+    del pending_round_starts[message.chat.id]
+    
+    # Get the game
+    game = await game_engine.db.get_active_game(message.chat.id)
+    if not game:
+        await message.reply("⚠️ No active game found.")
+        return
+    
+    # Verify no round is currently active
+    active_round = await game_engine.db.get_active_round(game.id)
+    if active_round and active_round.status == RoundStatus.ACTIVE:
+        await message.reply("⚠️ A round is already active")
+        return
+    
+    # Start the round with the specified Stars cost
+    round_obj = await game_engine.start_round(game.id, round_index, stars_cost)
+    
+    # Send announcement with sponsor message if available
+    announcement = Announcer.round_started(
+        round_index, 
+        round_obj.message_cost_hint, 
+        ROUND_DURATION_MINUTES,
+        game.sponsor_start_message
+    )
+    keyboard = AdminKeyboards.active_round_controls(round_index)
+    
+    await message.reply(announcement, reply_markup=keyboard, parse_mode="HTML")
+    logger.info(f"Round {round_index} started for game {game.id} with {stars_cost} Stars cost")
+
 @router.callback_query(F.data.startswith("admin:"))
 async def handle_admin_callback(callback: CallbackQuery, game_engine: GameEngine):
     """Handle all admin callback buttons."""
@@ -129,12 +198,6 @@ async def handle_admin_callback(callback: CallbackQuery, game_engine: GameEngine
     # Route to appropriate handler
     if action == "ask_cost":
         await handle_ask_cost(callback, data.get("n", 1))
-    elif action == "start_round":
-        stars_cost = data.get("c")
-        if stars_cost is None:
-            await callback.answer("⚠️ Stars cost not specified", show_alert=True)
-            return
-        await handle_start_round(callback, game_engine, game, data.get("n", 1), stars_cost)
     elif action == "pause_round":
         await handle_pause_round(callback, game_engine, game)
     elif action == "resume_round":
@@ -153,39 +216,18 @@ async def handle_admin_callback(callback: CallbackQuery, game_engine: GameEngine
         await callback.answer("❌ Unknown action", show_alert=True)
 
 async def handle_ask_cost(callback: CallbackQuery, round_index: int):
-    """Ask admin to select Stars cost for the round."""
-    keyboard = AdminKeyboards.select_stars_cost(round_index)
+    """Ask admin to type Stars cost for the round."""
+    # Store the pending round start
+    pending_round_starts[callback.message.chat.id] = round_index
+    
     await callback.message.reply(
-        f"⭐ <b>Select Stars Cost for Round {round_index}</b>\n\n"
-        "Please select how many Stars are required to post in this group:",
-        reply_markup=keyboard,
+        f"⭐ <b>Enter Stars Cost for Round {round_index}</b>\n\n"
+        "Please type the number of Stars required to post in this group.\n"
+        "Examples: <code>1</code>, <code>4</code>, <code>10</code>, etc.\n\n"
+        "Or send <code>/cancel</code> to cancel.",
         parse_mode="HTML"
     )
     await callback.answer()
-
-async def handle_start_round(callback: CallbackQuery, engine: GameEngine, game, round_index: int, stars_cost: int):
-    """Handle starting a new round with specified Stars cost."""
-    # Verify no round is currently active
-    active_round = await engine.db.get_active_round(game.id)
-    if active_round and active_round.status == RoundStatus.ACTIVE:
-        await callback.answer("⚠️ A round is already active", show_alert=True)
-        return
-    
-    # Start the round with the specified Stars cost
-    round_obj = await engine.start_round(game.id, round_index, stars_cost)
-    
-    # Send announcement with sponsor message if available
-    announcement = Announcer.round_started(
-        round_index, 
-        round_obj.message_cost_hint, 
-        ROUND_DURATION_MINUTES,
-        game.sponsor_start_message
-    )
-    keyboard = AdminKeyboards.active_round_controls(round_index)
-    
-    await callback.message.reply(announcement, reply_markup=keyboard, parse_mode="HTML")
-    await callback.answer(f"✅ Round {round_index} started with {stars_cost} ⭐ cost")
-    logger.info(f"Round {round_index} started for game {game.id} with {stars_cost} Stars cost")
 
 async def handle_pause_round(callback: CallbackQuery, engine: GameEngine, game):
     """Handle pausing the current round."""
