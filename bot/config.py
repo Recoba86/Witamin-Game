@@ -44,3 +44,9 @@ def get_round_cost(round_number: int) -> int:
 
 # Logging
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
+
+# Language configuration
+LANGUAGE = os.getenv("LANGUAGE", "en").lower()  # 'en' for English, 'fa' for Persian
+if LANGUAGE not in ["en", "fa"]:
+    raise ValueError("LANGUAGE must be either 'en' (English) or 'fa' (Persian/Farsi)")
+

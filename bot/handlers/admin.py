@@ -4,11 +4,12 @@ import logging
 from aiogram import Router, F
 from aiogram.filters import Command
 from aiogram.types import Message, CallbackQuery
-from bot.config import ADMIN_IDS, get_round_cost, ROUND_DURATION_MINUTES
+from bot.config import ADMIN_IDS, get_round_cost, ROUND_DURATION_MINUTES, LANGUAGE
 from bot.services.game_engine import GameEngine
 from bot.services.announcer import Announcer
 from bot.keyboards.admin import AdminKeyboards
 from bot.storage.models import GameStatus, RoundStatus
+from bot.translations import Translations
 
 logger = logging.getLogger(__name__)
 
@@ -29,8 +30,11 @@ async def cmd_newgame(message: Message, game_engine: GameEngine):
     All parameters are optional and separated by pipe |
     Example: /newgame 1000 | TechCorp | Welcome to our sponsored round! | Thanks for playing!
     """
+    t = Translations.get
+    lang = LANGUAGE
+    
     if not is_admin(message.from_user.id):
-        await message.reply("⚠️ Only admins can start a new game.")
+        await message.reply(t('only_admins_newgame', lang))
         return
     
     if not message.chat.type in ["group", "supergroup"]:
@@ -40,9 +44,7 @@ async def cmd_newgame(message: Message, game_engine: GameEngine):
     # Check if there's already an active game
     existing_game = await game_engine.db.get_active_game(message.chat.id)
     if existing_game:
-        await message.reply(
-            "⚠️ There's already an active game. Cancel it first with the Cancel button."
-        )
+        await message.reply(t('active_game_exists', lang))
         return
     
     # Parse command arguments
@@ -76,16 +78,7 @@ async def cmd_newgame(message: Message, game_engine: GameEngine):
                 sponsor_end = parts[3]
                 
         except ValueError:
-            await message.reply(
-                "⚠️ Invalid format!\n\n"
-                "<b>Usage:</b>\n"
-                "<code>/newgame [prize] | [sponsor] | [start_msg] | [end_msg]</code>\n\n"
-                "<b>Examples:</b>\n"
-                "• <code>/newgame 1000</code> (just prize)\n"
-                "• <code>/newgame 1000 | TechCorp | Welcome! | Thanks!</code>\n"
-                "• <code>/newgame | | Welcome | Goodbye</code> (no prize/sponsor name)",
-                parse_mode="HTML"
-            )
+            await message.reply(t('invalid_format', lang), parse_mode="HTML")
             return
     
     # Create new game
@@ -110,18 +103,24 @@ async def cmd_newgame(message: Message, game_engine: GameEngine):
 @router.message(Command("cancel"))
 async def cmd_cancel_input(message: Message):
     """Cancel any pending admin input."""
+    t = Translations.get
+    lang = LANGUAGE
+    
     if not is_admin(message.from_user.id):
         return
     
     if message.chat.id in pending_round_starts:
         del pending_round_starts[message.chat.id]
-        await message.reply("❌ Input cancelled.")
+        await message.reply(t('input_cancelled', lang))
     else:
-        await message.reply("⚠️ No pending input to cancel.")
+        await message.reply(t('no_pending_input', lang))
 
 @router.message(F.text)
 async def handle_stars_cost_input(message: Message, game_engine: GameEngine):
     """Handle Stars cost input from admin."""
+    t = Translations.get
+    lang = LANGUAGE
+    
     # Check if this chat has a pending round start
     if message.chat.id not in pending_round_starts:
         return  # Not waiting for input from this chat
@@ -137,10 +136,10 @@ async def handle_stars_cost_input(message: Message, game_engine: GameEngine):
     try:
         stars_cost = int(message.text.strip())
         if stars_cost < 0:
-            await message.reply("⚠️ Stars cost must be a positive number. Please try again.")
+            await message.reply(t('stars_must_be_positive', lang))
             return
     except ValueError:
-        await message.reply("⚠️ Invalid number. Please type a valid number of Stars (e.g., 1, 4, 10).")
+        await message.reply(t('invalid_stars_number', lang))
         return
     
     # Clear the pending state
@@ -149,13 +148,13 @@ async def handle_stars_cost_input(message: Message, game_engine: GameEngine):
     # Get the game
     game = await game_engine.db.get_active_game(message.chat.id)
     if not game:
-        await message.reply("⚠️ No active game found.")
+        await message.reply(t('no_active_game_found', lang))
         return
     
     # Verify no round is currently active
     active_round = await game_engine.db.get_active_round(game.id)
     if active_round and active_round.status == RoundStatus.ACTIVE:
-        await message.reply("⚠️ A round is already active")
+        await message.reply(t('round_already_active', lang))
         return
     
     # Start the round with the specified Stars cost
@@ -176,8 +175,11 @@ async def handle_stars_cost_input(message: Message, game_engine: GameEngine):
 @router.callback_query(F.data.startswith("admin:"))
 async def handle_admin_callback(callback: CallbackQuery, game_engine: GameEngine):
     """Handle all admin callback buttons."""
+    t = Translations.get
+    lang = LANGUAGE
+    
     if not is_admin(callback.from_user.id):
-        await callback.answer("⚠️ Only admins can use these controls.", show_alert=True)
+        await callback.answer(t('only_admins', lang), show_alert=True)
         return
     
     # Parse callback data
@@ -186,13 +188,13 @@ async def handle_admin_callback(callback: CallbackQuery, game_engine: GameEngine
         data = json.loads(json_data)
         action = data.get("a")
     except json.JSONDecodeError:
-        await callback.answer("❌ Invalid callback data", show_alert=True)
+        await callback.answer(t('invalid_callback', lang), show_alert=True)
         return
     
     # Get active game
     game = await game_engine.db.get_active_game(callback.message.chat.id)
     if not game and action not in ["status"]:
-        await callback.answer("⚠️ No active game", show_alert=True)
+        await callback.answer(t('no_active_game', lang), show_alert=True)
         return
     
     # Route to appropriate handler
@@ -213,27 +215,30 @@ async def handle_admin_callback(callback: CallbackQuery, game_engine: GameEngine
     elif action == "status":
         await handle_status(callback, game_engine, callback.message.chat.id)
     else:
-        await callback.answer("❌ Unknown action", show_alert=True)
+        await callback.answer(t('unknown_action', lang), show_alert=True)
 
 async def handle_ask_cost(callback: CallbackQuery, round_index: int):
     """Ask admin to type Stars cost for the round."""
+    t = Translations.get
+    lang = LANGUAGE
+    
     # Store the pending round start
     pending_round_starts[callback.message.chat.id] = round_index
     
     await callback.message.reply(
-        f"⭐ <b>Enter Stars Cost for Round {round_index}</b>\n\n"
-        "Please type the number of Stars required to post in this group.\n"
-        "Examples: <code>1</code>, <code>4</code>, <code>10</code>, etc.\n\n"
-        "Or send <code>/cancel</code> to cancel.",
+        t('ask_stars_cost', lang, round=round_index),
         parse_mode="HTML"
     )
     await callback.answer()
 
 async def handle_pause_round(callback: CallbackQuery, engine: GameEngine, game):
     """Handle pausing the current round."""
+    t = Translations.get
+    lang = LANGUAGE
+    
     active_round = await engine.db.get_active_round(game.id)
     if not active_round:
-        await callback.answer("⚠️ No active round", show_alert=True)
+        await callback.answer(t('no_active_round', lang), show_alert=True)
         return
     
     await engine.pause_round(active_round.id)
@@ -242,14 +247,17 @@ async def handle_pause_round(callback: CallbackQuery, engine: GameEngine, game):
     keyboard = AdminKeyboards.paused_round_controls(active_round.round_index)
     
     await callback.message.reply(announcement, reply_markup=keyboard, parse_mode="HTML")
-    await callback.answer("⏸ Round paused")
+    await callback.answer(t('round_paused_btn', lang))
     logger.info(f"Round {active_round.id} paused")
 
 async def handle_resume_round(callback: CallbackQuery, engine: GameEngine, game):
     """Handle resuming a paused round."""
+    t = Translations.get
+    lang = LANGUAGE
+    
     active_round = await engine.db.get_active_round(game.id)
     if not active_round:
-        await callback.answer("⚠️ No active round", show_alert=True)
+        await callback.answer(t('no_active_round', lang), show_alert=True)
         return
     
     await engine.resume_round(active_round.id)
@@ -258,14 +266,17 @@ async def handle_resume_round(callback: CallbackQuery, engine: GameEngine, game)
     keyboard = AdminKeyboards.active_round_controls(active_round.round_index)
     
     await callback.message.reply(announcement, reply_markup=keyboard, parse_mode="HTML")
-    await callback.answer("▶️ Round resumed")
+    await callback.answer(t('round_resumed_btn', lang))
     logger.info(f"Round {active_round.id} resumed")
 
 async def handle_close_round(callback: CallbackQuery, engine: GameEngine, game):
     """Handle closing the current round."""
+    t = Translations.get
+    lang = LANGUAGE
+    
     active_round = await engine.db.get_active_round(game.id)
     if not active_round:
-        await callback.answer("⚠️ No active round", show_alert=True)
+        await callback.answer(t('no_active_round', lang), show_alert=True)
         return
     
     await engine.close_round(active_round.id)
@@ -279,11 +290,14 @@ async def handle_close_round(callback: CallbackQuery, engine: GameEngine, game):
     keyboard = AdminKeyboards.between_rounds_controls(next_round)
     
     await callback.message.reply(announcement, reply_markup=keyboard, parse_mode="HTML")
-    await callback.answer("🔒 Round closed")
+    await callback.answer(t('round_closed_btn', lang))
     logger.info(f"Round {active_round.id} closed")
 
 async def handle_reveal(callback: CallbackQuery, engine: GameEngine, game):
     """Handle manual reveal of the number."""
+    t = Translations.get
+    lang = LANGUAGE
+    
     # Verify the game
     is_valid = await engine.verify_game(game.id)
     
@@ -294,16 +308,20 @@ async def handle_reveal(callback: CallbackQuery, engine: GameEngine, game):
     # Mark game as finished (no winner)
     await engine.db.update_game_status(game.id, GameStatus.GAME_FINISHED)
     
-    await callback.answer("🔓 Number revealed")
+    await callback.answer(t('game_revealed_btn', lang))
     logger.info(f"Game {game.id} manually revealed")
 
 async def handle_cancel(callback: CallbackQuery, engine: GameEngine, game):
     """Handle game cancellation."""
+    t = Translations.get
+    lang = LANGUAGE
+    
     await engine.cancel_game(game.id)
     
     announcement = Announcer.game_canceled()
+    
     await callback.message.reply(announcement, parse_mode="HTML")
-    await callback.answer("❌ Game canceled")
+    await callback.answer(t('game_canceled_btn', lang))
     logger.info(f"Game {game.id} canceled")
 
 async def handle_post_cost(callback: CallbackQuery, engine: GameEngine, game, round_index: int):
@@ -316,10 +334,13 @@ async def handle_post_cost(callback: CallbackQuery, engine: GameEngine, game, ro
 
 async def handle_status(callback: CallbackQuery, engine: GameEngine, chat_id: int):
     """Handle status request."""
+    t = Translations.get
+    lang = LANGUAGE
+    
     status = await engine.get_status(chat_id)
     
     if not status:
-        await callback.answer("⚠️ No active game", show_alert=True)
+        await callback.answer(t('no_active_game', lang), show_alert=True)
         return
     
     last_guess_value = None
