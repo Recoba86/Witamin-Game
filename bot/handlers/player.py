@@ -84,9 +84,9 @@ async def handle_guess(message: Message, game_engine: GameEngine):
     # Send text hint - reactions are unreliable in groups
     # They're often private or disappear, so use clear text hints
     if guess_value < game.number:
-        hint = "👍 The number is <b>higher</b>"
+        hint = "The number is <b>higher</b> ⬆️"
     else:
-        hint = "� The number is <b>lower</b>"
+        hint = "The number is <b>lower</b> ⬇️"
     
     await message.reply(hint, parse_mode="HTML")
 
