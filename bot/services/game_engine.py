@@ -15,13 +15,23 @@ class GameEngine:
         self.db = db
         self.round_timers = {}  # Store active round timers {round_id: task}
     
-    async def create_game(self, chat_id: int, prize_amount: Optional[float] = None) -> Tuple[Game, str]:
+    async def create_game(
+        self, 
+        chat_id: int, 
+        prize_amount: Optional[float] = None,
+        sponsor_name: Optional[str] = None,
+        sponsor_start_message: Optional[str] = None,
+        sponsor_end_message: Optional[str] = None
+    ) -> Tuple[Game, str]:
         """
         Create a new game with commit-reveal.
         
         Args:
             chat_id: The Telegram chat ID
             prize_amount: Optional prize amount for the winner
+            sponsor_name: Optional sponsor name
+            sponsor_start_message: Optional message to show at round start
+            sponsor_end_message: Optional message to show at round end
             
         Returns:
             Tuple of (Game object, hash message for posting)
@@ -38,7 +48,10 @@ class GameEngine:
             salt=salt,
             number=number,
             created_at=datetime.now(),
-            prize_amount=prize_amount
+            prize_amount=prize_amount,
+            sponsor_name=sponsor_name,
+            sponsor_start_message=sponsor_start_message,
+            sponsor_end_message=sponsor_end_message
         )
         
         game.id = await self.db.create_game(game)

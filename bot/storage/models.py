@@ -33,6 +33,9 @@ class Game:
         finished_at: Optional[datetime] = None,
         winner_user_id: Optional[int] = None,
         prize_amount: Optional[float] = None,
+        sponsor_name: Optional[str] = None,
+        sponsor_start_message: Optional[str] = None,
+        sponsor_end_message: Optional[str] = None,
     ):
         self.id = id
         self.chat_id = chat_id
@@ -44,6 +47,9 @@ class Game:
         self.finished_at = finished_at
         self.winner_user_id = winner_user_id
         self.prize_amount = prize_amount
+        self.sponsor_name = sponsor_name
+        self.sponsor_start_message = sponsor_start_message
+        self.sponsor_end_message = sponsor_end_message
 
 class Round:
     """Represents a game round."""

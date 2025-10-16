@@ -26,7 +26,10 @@ class Database:
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     finished_at TIMESTAMP,
                     winner_user_id INTEGER,
-                    prize_amount REAL
+                    prize_amount REAL,
+                    sponsor_name TEXT,
+                    sponsor_start_message TEXT,
+                    sponsor_end_message TEXT
                 )
             """)
             
@@ -87,9 +90,11 @@ class Database:
         """Create a new game."""
         async with aiosqlite.connect(self.db_path) as db:
             cursor = await db.execute(
-                """INSERT INTO games (chat_id, status, target_hash, salt, number, created_at, prize_amount)
-                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
-                (game.chat_id, game.status, game.target_hash, game.salt, game.number, game.created_at, game.prize_amount)
+                """INSERT INTO games (chat_id, status, target_hash, salt, number, created_at, prize_amount, 
+                   sponsor_name, sponsor_start_message, sponsor_end_message)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (game.chat_id, game.status, game.target_hash, game.salt, game.number, game.created_at, 
+                 game.prize_amount, game.sponsor_name, game.sponsor_start_message, game.sponsor_end_message)
             )
             await db.commit()
             return cursor.lastrowid
@@ -295,7 +300,10 @@ class Database:
             created_at=row['created_at'],
             finished_at=row['finished_at'],
             winner_user_id=row['winner_user_id'],
-            prize_amount=row['prize_amount']
+            prize_amount=row['prize_amount'],
+            sponsor_name=row['sponsor_name'],
+            sponsor_start_message=row['sponsor_start_message'],
+            sponsor_end_message=row['sponsor_end_message']
         )
     
     def _row_to_round(self, row) -> Round:

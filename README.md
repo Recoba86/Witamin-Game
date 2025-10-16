@@ -11,6 +11,7 @@ A Telegram bot that runs a provably fair guessing game in group chats. Players c
 - **Timed Rounds**: Each round lasts 2 minutes (configurable), but stays open until at least 10 guesses
 - **Reaction Hints**: Bot reacts with 👍 (higher) or 👎 (lower) to each guess
 - **Prize System**: Set a prize amount when creating the game
+- **Sponsor System**: Optional sponsor with custom messages at round start/end
 - **Unlimited Guesses**: No limit on total guesses (10 per player per round)
 - **Admin Controls**: Full game management via inline keyboard buttons
 
@@ -82,11 +83,16 @@ P = max(50, 100 - (25 * missed_round1) - (15 * other_missed_rounds))
 ### For Admins
 
 1. Add the bot to your Telegram group
-2. Use `/newgame [prize_amount]` to create a new game (e.g., `/newgame 1000`)
+2. Use `/newgame` to create a new game with optional parameters:
+   - **Simple**: `/newgame 1000` (just prize)
+   - **With Sponsor**: `/newgame 1000 | TechCorp | Welcome message | Closing message`
+   - **Format**: `/newgame [prize] | [sponsor] | [start_msg] | [end_msg]`
 3. The bot posts a commitment hash (provably fair!)
 4. Click "▶️ Start Round 1" to begin
-5. Rounds automatically close after 2 minutes (if at least 10 guesses were made)
-6. Manage the game using inline keyboard buttons:
+5. If sponsor is set, bot shows sponsor message at round start
+6. Rounds automatically close after 2 minutes (if at least 10 guesses were made)
+7. If sponsor is set, bot shows closing message at round end
+8. Manage the game using inline keyboard buttons:
    - **Pause/Resume Round**: Temporarily stop accepting guesses
    - **Close Round**: End current round, start next one
    - **Reveal Number**: Manually end game and show answer
@@ -108,7 +114,9 @@ P = max(50, 100 - (25 * missed_round1) - (15 * other_missed_rounds))
 
 - `/start` - Show help and game rules
 - `/status` - View current game status
-- `/newgame [prize_amount]` - (Admin only) Start a new game with optional prize (e.g., `/newgame 1000`)
+- `/newgame [params]` - (Admin only) Start a new game
+  - Format: `/newgame [prize] | [sponsor] | [start_msg] | [end_msg]`
+  - Example: `/newgame 1000 | TechCorp | Welcome! | Thanks for playing!`
 
 ## 📁 Project Structure
 
@@ -137,12 +145,13 @@ bot/
 
 ## 🧪 Testing Scenarios
 
-### 1. Full Game Flow with Timer
-1. `/newgame 500` → Bot posts hash commitment and prize (500 ⭐)
-2. Start Round 1 → Timer starts (2 minutes)
-3. Players send 10+ guesses → Bot reacts with 👍 or 👎
-4. Round auto-closes after 2 minutes (if 10+ guesses made)
-5. Someone guesses correctly → Winner announced with prize
+### 1. Full Game Flow with Sponsor
+1. `/newgame 500 | TechCorp | Try our new app! | Thanks for participating!`
+2. Bot posts hash commitment, prize (500 ⭐), and sponsor (TechCorp)
+3. Start Round 1 → Timer starts + "Try our new app!" shown
+4. Players send 10+ guesses → Bot reacts with 👍 or 👎
+5. Round auto-closes → "Thanks for participating!" shown
+6. Someone guesses correctly → Winner announced with prize
 
 ### 2. Loyalty Calculation
 - Player joins Round 1, 2, 4 (misses Round 3)
@@ -249,7 +258,10 @@ Contributions are welcome! Feel free to:
 
 ## 💡 Tips
 
-- **Prize Amount**: Set it when creating the game: `/newgame 1000` (for 1000 stars prize)
+- **Prize & Sponsor**: Set when creating the game:
+  - Simple: `/newgame 1000` (just prize)
+  - With sponsor: `/newgame 1000 | TechCorp | Welcome! | Goodbye!`
+  - No sponsor: Messages won't be displayed if sponsor fields are empty
 - **Round Timer**: Configurable in `.env` (default 2 minutes)
 - **Minimum Guesses**: Rounds need at least 10 total guesses before timer can close them
 - **Unlimited Guesses**: No limit on total guesses from all players combined

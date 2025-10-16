@@ -7,15 +7,17 @@ class Announcer:
     """Formats messages for game announcements."""
     
     @staticmethod
-    def game_created(target_hash: str, prize_amount: Optional[float] = None) -> str:
+    def game_created(target_hash: str, prize_amount: Optional[float] = None, sponsor_name: Optional[str] = None) -> str:
         """Format message for new game creation."""
         prize_text = f"\n💰 <b>Prize:</b> {prize_amount} ⭐\n" if prize_amount else "\n"
+        sponsor_text = f"🎗 <b>Sponsored by:</b> {sponsor_name}\n" if sponsor_name else ""
         
         return (
             "🎮 <b>New Game Started!</b>\n\n"
             "🔒 <b>Provably Fair Commitment</b>\n"
             f"<code>{target_hash}</code>\n"
             f"{prize_text}"
+            f"{sponsor_text}"
             "📋 <b>Rules:</b>\n"
             "• Secret number is between 1 and 10,000\n"
             "• Each player can guess up to 10 times per round\n"
@@ -27,9 +29,9 @@ class Announcer:
         )
     
     @staticmethod
-    def round_started(round_index: int, cost: int, duration_minutes: int = 2) -> str:
+    def round_started(round_index: int, cost: int, duration_minutes: int = 2, sponsor_message: Optional[str] = None) -> str:
         """Format message for round start."""
-        return (
+        base_message = (
             f"🔥 <b>Round {round_index} Started!</b>\n\n"
             f"💰 Suggested cost: <b>{cost} ⭐ Star(s)</b>\n"
             f"⏱ Duration: <b>{duration_minutes} minutes</b> (min 10 guesses)\n"
@@ -37,6 +39,12 @@ class Announcer:
             f"📊 Limit: 10 guesses per player\n\n"
             "Good luck! 🍀"
         )
+        
+        # Add sponsor message if provided
+        if sponsor_message:
+            base_message += f"\n\n📢 <b>Sponsor Message:</b>\n{sponsor_message}"
+        
+        return base_message
     
     @staticmethod
     def round_paused() -> str:
@@ -49,12 +57,18 @@ class Announcer:
         return f"▶️ <b>Round {round_index} Resumed!</b>\n\nContinue guessing!"
     
     @staticmethod
-    def round_closed(round_index: int) -> str:
+    def round_closed(round_index: int, sponsor_message: Optional[str] = None) -> str:
         """Format message for round close."""
-        return (
+        base_message = (
             f"🔒 <b>Round {round_index} Closed</b>\n\n"
             "No winner yet. Admin can start the next round."
         )
+        
+        # Add sponsor closing message if provided
+        if sponsor_message:
+            base_message += f"\n\n📢 <b>Sponsor Message:</b>\n{sponsor_message}"
+        
+        return base_message
     
     @staticmethod
     def hint_message(last_guess: int, target_number: int) -> str:

@@ -27,7 +27,12 @@ async def get_engine(message_or_query) -> GameEngine:
 
 @router.message(Command("newgame"))
 async def cmd_newgame(message: Message):
-    """Handle /newgame command - create a new game."""
+    """Handle /newgame command - create a new game.
+    
+    Usage: /newgame [prize] [sponsor_name] [start_msg] [end_msg]
+    All parameters are optional and separated by pipe |
+    Example: /newgame 1000 | TechCorp | Welcome to our sponsored round! | Thanks for playing!
+    """
     if not is_admin(message.from_user.id):
         await message.reply("⚠️ Only admins can start a new game.")
         return
@@ -46,29 +51,67 @@ async def cmd_newgame(message: Message):
         )
         return
     
-    # Parse prize amount from command arguments
-    # Usage: /newgame 1000 or /newgame
+    # Parse command arguments
+    # Format: /newgame [prize] | [sponsor_name] | [start_message] | [end_message]
     prize_amount = None
-    command_args = message.text.split(maxsplit=1)
-    if len(command_args) > 1:
+    sponsor_name = None
+    sponsor_start = None
+    sponsor_end = None
+    
+    command_text = message.text.replace("/newgame", "").strip()
+    
+    if command_text:
+        # Split by pipe separator
+        parts = [p.strip() for p in command_text.split("|")]
+        
         try:
-            prize_amount = float(command_args[1])
+            # First part is prize amount
+            if parts[0]:
+                prize_amount = float(parts[0])
+            
+            # Second part is sponsor name
+            if len(parts) > 1 and parts[1]:
+                sponsor_name = parts[1]
+            
+            # Third part is sponsor start message
+            if len(parts) > 2 and parts[2]:
+                sponsor_start = parts[2]
+            
+            # Fourth part is sponsor end message
+            if len(parts) > 3 and parts[3]:
+                sponsor_end = parts[3]
+                
         except ValueError:
             await message.reply(
-                "⚠️ Invalid prize amount. Usage: /newgame [prize_amount]\n"
-                "Example: /newgame 1000"
+                "⚠️ Invalid format!\n\n"
+                "<b>Usage:</b>\n"
+                "<code>/newgame [prize] | [sponsor] | [start_msg] | [end_msg]</code>\n\n"
+                "<b>Examples:</b>\n"
+                "• <code>/newgame 1000</code> (just prize)\n"
+                "• <code>/newgame 1000 | TechCorp | Welcome! | Thanks!</code>\n"
+                "• <code>/newgame | | Welcome | Goodbye</code> (no prize/sponsor name)",
+                parse_mode="HTML"
             )
             return
     
     # Create new game
-    game, target_hash = await engine.create_game(message.chat.id, prize_amount)
+    game, target_hash = await engine.create_game(
+        message.chat.id, 
+        prize_amount,
+        sponsor_name,
+        sponsor_start,
+        sponsor_end
+    )
     
     # Send announcement
-    announcement = Announcer.game_created(target_hash, prize_amount)
+    announcement = Announcer.game_created(target_hash, prize_amount, sponsor_name)
     keyboard = AdminKeyboards.new_game_controls(next_round=1)
     
     await message.reply(announcement, reply_markup=keyboard, parse_mode="HTML")
-    logger.info(f"New game created in chat {message.chat.id}, game_id={game.id}, prize={prize_amount}")
+    logger.info(
+        f"New game created in chat {message.chat.id}, game_id={game.id}, "
+        f"prize={prize_amount}, sponsor={sponsor_name}"
+    )
 
 @router.callback_query(F.data.startswith("admin:"))
 async def handle_admin_callback(callback: CallbackQuery):
@@ -125,8 +168,13 @@ async def handle_start_round(callback: CallbackQuery, engine: GameEngine, game, 
     # Start the round
     round_obj = await engine.start_round(game.id, round_index)
     
-    # Send announcement
-    announcement = Announcer.round_started(round_index, round_obj.message_cost_hint, ROUND_DURATION_MINUTES)
+    # Send announcement with sponsor message if available
+    announcement = Announcer.round_started(
+        round_index, 
+        round_obj.message_cost_hint, 
+        ROUND_DURATION_MINUTES,
+        game.sponsor_start_message
+    )
     keyboard = AdminKeyboards.active_round_controls(round_index)
     
     await callback.message.reply(announcement, reply_markup=keyboard, parse_mode="HTML")
@@ -178,7 +226,8 @@ async def handle_close_round(callback: CallbackQuery, engine: GameEngine, game):
     all_rounds = await engine.db.get_rounds_for_game(game.id)
     next_round = len(all_rounds) + 1
     
-    announcement = Announcer.round_closed(active_round.index)
+    # Send announcement with sponsor end message if available
+    announcement = Announcer.round_closed(active_round.index, game.sponsor_end_message)
     keyboard = AdminKeyboards.between_rounds_controls(next_round)
     
     await callback.message.reply(announcement, reply_markup=keyboard, parse_mode="HTML")
