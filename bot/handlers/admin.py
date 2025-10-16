@@ -18,15 +18,8 @@ def is_admin(user_id: int) -> bool:
     """Check if user is admin."""
     return user_id in ADMIN_IDS
 
-async def get_engine(message_or_query) -> GameEngine:
-    """Get game engine from bot data."""
-    if isinstance(message_or_query, Message):
-        return message_or_query.bot.get("game_engine")
-    else:
-        return message_or_query.bot.get("game_engine")
-
 @router.message(Command("newgame"))
-async def cmd_newgame(message: Message):
+async def cmd_newgame(message: Message, game_engine: GameEngine):
     """Handle /newgame command - create a new game.
     
     Usage: /newgame [prize] [sponsor_name] [start_msg] [end_msg]
@@ -41,10 +34,8 @@ async def cmd_newgame(message: Message):
         await message.reply("⚠️ This command only works in groups.")
         return
     
-    engine: GameEngine = message.bot.get("game_engine")
-    
     # Check if there's already an active game
-    existing_game = await engine.db.get_active_game(message.chat.id)
+    existing_game = await game_engine.db.get_active_game(message.chat.id)
     if existing_game:
         await message.reply(
             "⚠️ There's already an active game. Cancel it first with the Cancel button."
@@ -95,7 +86,7 @@ async def cmd_newgame(message: Message):
             return
     
     # Create new game
-    game, target_hash = await engine.create_game(
+    game, target_hash = await game_engine.create_game(
         message.chat.id, 
         prize_amount,
         sponsor_name,
@@ -114,7 +105,7 @@ async def cmd_newgame(message: Message):
     )
 
 @router.callback_query(F.data.startswith("admin:"))
-async def handle_admin_callback(callback: CallbackQuery):
+async def handle_admin_callback(callback: CallbackQuery, game_engine: GameEngine):
     """Handle all admin callback buttons."""
     if not is_admin(callback.from_user.id):
         await callback.answer("⚠️ Only admins can use these controls.", show_alert=True)
@@ -129,31 +120,29 @@ async def handle_admin_callback(callback: CallbackQuery):
         await callback.answer("❌ Invalid callback data", show_alert=True)
         return
     
-    engine: GameEngine = callback.bot.get("game_engine")
-    
     # Get active game
-    game = await engine.db.get_active_game(callback.message.chat.id)
+    game = await game_engine.db.get_active_game(callback.message.chat.id)
     if not game and action not in ["status"]:
         await callback.answer("⚠️ No active game", show_alert=True)
         return
     
     # Route to appropriate handler
     if action == "start_round":
-        await handle_start_round(callback, engine, game, data.get("n", 1))
+        await handle_start_round(callback, game_engine, game, data.get("n", 1))
     elif action == "pause_round":
-        await handle_pause_round(callback, engine, game)
+        await handle_pause_round(callback, game_engine, game)
     elif action == "resume_round":
-        await handle_resume_round(callback, engine, game)
+        await handle_resume_round(callback, game_engine, game)
     elif action == "close_round":
-        await handle_close_round(callback, engine, game)
+        await handle_close_round(callback, game_engine, game)
     elif action == "reveal":
-        await handle_reveal(callback, engine, game)
+        await handle_reveal(callback, game_engine, game)
     elif action == "cancel":
-        await handle_cancel(callback, engine, game)
+        await handle_cancel(callback, game_engine, game)
     elif action == "post_cost":
-        await handle_post_cost(callback, engine, game, data.get("n", 1))
+        await handle_post_cost(callback, game_engine, game, data.get("n", 1))
     elif action == "status":
-        await handle_status(callback, engine, callback.message.chat.id)
+        await handle_status(callback, game_engine, callback.message.chat.id)
     else:
         await callback.answer("❌ Unknown action", show_alert=True)
 

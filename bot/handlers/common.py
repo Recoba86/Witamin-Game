@@ -18,12 +18,11 @@ async def cmd_start(message: Message):
     logger.info(f"User {message.from_user.id} requested help")
 
 @router.message(Command("status"))
-async def cmd_status(message: Message):
+async def cmd_status(message: Message, game_engine: GameEngine):
     """Handle /status command - show current game status."""
-    engine: GameEngine = message.bot.get("game_engine")
     
     # Get status for this chat
-    status = await engine.get_status(message.chat.id)
+    status = await game_engine.get_status(message.chat.id)
     
     if not status:
         await message.reply(Announcer.no_active_game())

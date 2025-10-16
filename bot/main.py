@@ -35,9 +35,6 @@ async def main():
     )
     dp = Dispatcher()
     
-    # Store game engine in bot data for handlers to access
-    bot["game_engine"] = game_engine
-    
     # Register routers (order matters - more specific first)
     dp.include_router(admin.router)
     dp.include_router(common.router)
@@ -45,10 +42,14 @@ async def main():
     
     logger.info("Routers registered")
     
-    # Start polling
+    # Start polling - pass game_engine as workflow_data
     try:
         logger.info("Bot started successfully! Polling for updates...")
-        await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
+        await dp.start_polling(
+            bot, 
+            allowed_updates=dp.resolve_used_update_types(),
+            game_engine=game_engine  # Pass as keyword argument to workflow_data
+        )
     finally:
         await bot.session.close()
 

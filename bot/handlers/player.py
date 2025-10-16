@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 router = Router()
 
 @router.message(F.text, F.chat.type.in_({"group", "supergroup"}))
-async def handle_guess(message: Message):
+async def handle_guess(message: Message, game_engine: GameEngine):
     """Handle player guesses in group chats."""
     # Extract guess from message
     guess_value = extract_guess(message.text)
@@ -31,10 +31,8 @@ async def handle_guess(message: Message):
         await message.reply(Announcer.invalid_guess())
         return
     
-    engine: GameEngine = message.bot.get("game_engine")
-    
     # Get active game
-    game = await engine.db.get_active_game(message.chat.id)
+    game = await game_engine.db.get_active_game(message.chat.id)
     if not game:
         # No active game, silently ignore
         return
@@ -45,7 +43,7 @@ async def handle_guess(message: Message):
         return
     
     # Get active round
-    active_round = await engine.db.get_active_round(game.id)
+    active_round = await game_engine.db.get_active_round(game.id)
     if not active_round:
         # No active round, silently ignore
         return
@@ -56,7 +54,7 @@ async def handle_guess(message: Message):
         return
     
     # Check guess limit for this player
-    user_guesses = await engine.db.get_user_guesses_in_round(
+    user_guesses = await game_engine.db.get_user_guesses_in_round(
         active_round.id,
         message.from_user.id
     )
@@ -66,7 +64,7 @@ async def handle_guess(message: Message):
         return
     
     # Register the guess
-    is_correct, guess = await engine.register_guess(
+    is_correct, guess = await game_engine.register_guess(
         game.id,
         active_round.id,
         message.from_user.id,
@@ -80,7 +78,7 @@ async def handle_guess(message: Message):
     
     # Check if guess is correct (WINNER!)
     if is_correct:
-        await handle_winner(message, engine, game, active_round)
+        await handle_winner(message, game_engine, game, active_round)
         return
     
     # Add reaction hint: 👍 if number is higher, 👎 if lower
