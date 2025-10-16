@@ -140,7 +140,7 @@ class GameEngine:
         
         # Get round and game info
         round_obj = await self.db.get_round(round_id)
-        game = await self.db.get_game_by_id(game_id)
+        game = await self.db.get_game(game_id)
         
         if not round_obj or not game:
             return
