@@ -11,8 +11,9 @@ from bot.config import MIN_NUMBER, MAX_NUMBER, get_round_cost, ROUND_DURATION_MI
 class GameEngine:
     """Main game engine handling all game logic."""
     
-    def __init__(self, db: Database):
+    def __init__(self, db: Database, bot=None):
         self.db = db
+        self.bot = bot  # Store bot instance for sending messages
         self.round_timers = {}  # Store active round timers {round_id: task}
     
     async def create_game(
@@ -109,7 +110,7 @@ class GameEngine:
                 
                 # Only close if we have at least MIN_GUESSES_BEFORE_CLOSE guesses
                 if round_obj.total_guesses >= MIN_GUESSES_BEFORE_CLOSE:
-                    await self.close_round(round_id)
+                    await self._auto_close_round(round_id, game_id)
                 else:
                     # Wait until we reach minimum guesses - check every 30 seconds
                     while True:
@@ -118,7 +119,7 @@ class GameEngine:
                         if not round_obj or round_obj.status != RoundStatus.ACTIVE:
                             break
                         if round_obj.total_guesses >= MIN_GUESSES_BEFORE_CLOSE:
-                            await self.close_round(round_id)
+                            await self._auto_close_round(round_id, game_id)
                             break
             except asyncio.CancelledError:
                 # Timer was cancelled (round manually closed/paused)
@@ -131,6 +132,43 @@ class GameEngine:
         # Create and store the timer task
         task = asyncio.create_task(timer_task())
         self.round_timers[round_id] = task
+    
+    async def _auto_close_round(self, round_id: int, game_id: int):
+        """Auto-close a round and send announcement to chat."""
+        from bot.services.announcer import Announcer
+        from bot.keyboards.admin import AdminKeyboards
+        
+        # Get round and game info
+        round_obj = await self.db.get_round(round_id)
+        game = await self.db.get_game_by_id(game_id)
+        
+        if not round_obj or not game:
+            return
+        
+        # Close the round
+        await self.close_round(round_id)
+        
+        # Send announcement if bot is available
+        if self.bot:
+            try:
+                # Calculate next round number
+                all_rounds = await self.db.get_rounds_for_game(game_id)
+                next_round = len(all_rounds) + 1
+                
+                # Send announcement with sponsor end message if available
+                announcement = Announcer.round_closed(round_obj.round_index, game.sponsor_end_message)
+                keyboard = AdminKeyboards.between_rounds_controls(next_round)
+                
+                await self.bot.send_message(
+                    chat_id=game.chat_id,
+                    text=announcement,
+                    reply_markup=keyboard,
+                    parse_mode="HTML"
+                )
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Failed to send auto-close announcement: {e}")
     
     async def pause_round(self, round_id: int):
         """Pause the current round."""

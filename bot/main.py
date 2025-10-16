@@ -24,16 +24,16 @@ async def main():
     await db.init_db()
     logger.info(f"Database initialized at {DATABASE_PATH}")
     
-    # Initialize game engine
-    game_engine = GameEngine(db)
-    logger.info("Game engine initialized")
-    
     # Initialize bot and dispatcher
     bot = Bot(
         token=BOT_TOKEN,
         default=DefaultBotProperties(parse_mode=ParseMode.HTML)
     )
     dp = Dispatcher()
+    
+    # Initialize game engine with bot instance for auto-close announcements
+    game_engine = GameEngine(db, bot)
+    logger.info("Game engine initialized")
     
     # Register routers (order matters - more specific first)
     dp.include_router(admin.router)
